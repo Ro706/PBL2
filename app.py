@@ -1,38 +1,40 @@
-import streamlit as st
-from PIL import Image
-import numpy as np
-import tensorflow as tf
+import tkinter as tk
+from tkinter import filedialog
+# Function to load and predict an image
+def predict_image():
+    # Open file dialog to select an image
+    file_path = filedialog.askopenfilename()
+    if file_path:
+        # Display the image in the GUI
+        img = Image.open(file_path)
+        img = img.resize((200, 200))
+        img = ImageTk.PhotoImage(img)
+        image_label.configure(image=img)
+        image_label.image = img
 
-# Load model
-model = tf.keras.models.load_model("fire_detection_model.h5")
+        # Preprocess the image for the model
+        img_for_model = Image.open(file_path).resize((64, 64))
+        img_array = np.array(img_for_model) / 255.0  # Rescale like during training
+        img_array = np.expand_dims(img_array, axis=0)  # Add batch dimension
 
-st.set_page_config(page_title="Forest Fire Detection", layout="centered")
+        # Make a prediction
+        prediction = model.predict(img_array)[0][0]
+        result = "Wildfire" if prediction > 0.5 else "No Wildfire"
+        result_label.config(text="Prediction: " + result)
 
-st.title("🌲🔥 Forest Fire Detection")
+# Setting up the GUI window
+root = tk.Tk()
+root.title("Forest Fire Detection")
+root.geometry("400x400")
 
-# Show Earth rotating image
-earth_image_url = "https://static.vecteezy.com/system/resources/thumbnails/002/019/623/large/a-transparent-earth-rotates-free-video.jpg"
-st.markdown(
-    f"<center><img src='{earth_image_url}' alt='Rotating Earth' width='300'></center>",
-    unsafe_allow_html=True,
-)
+# Add widgets
+btn = tk.Button(root, text="Upload Image", command=predict_image)
+btn.pack(pady=20)
 
-st.write("Upload an image of the forest area to detect wildfire presence.")
+image_label = tk.Label(root)
+image_label.pack()
 
-uploaded_file = st.file_uploader("Upload Image", type=["jpg", "jpeg", "png"])
+result_label = tk.Label(root, text="Prediction: ", font=("Helvetica", 16))
+result_label.pack(pady=20)
 
-if uploaded_file is not None:
-    img = Image.open(uploaded_file)
-    st.image(img, caption="Input Image", use_column_width=True)
-
-    img_for_model = img.resize((64, 64))
-    img_array = np.array(img_for_model) / 255.0
-    img_array = np.expand_dims(img_array, axis=0)
-
-    prediction = model.predict(img_array)[0][0]
-    result = "🔥 Wildfire Detected" if prediction > 0.5 else "✅ No Wildfire"
-
-    st.markdown(
-        f"<h3 style='text-align: center; color: {'red' if prediction > 0.5 else 'green'};'>{result}</h3>",
-        unsafe_allow_html=True,
-    )
+root.mainloop()
